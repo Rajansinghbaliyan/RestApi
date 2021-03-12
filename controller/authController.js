@@ -10,7 +10,7 @@ exports.signup = async (req, res, next) => {
       photo: data.photo,
       password: data.password,
       passwordConfirm: data.passwordConfirm,
-      passwordUpdatedAt: Date.now()
+      passwordUpdatedAt: Date.now(),
     });
 
     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
@@ -66,13 +66,16 @@ exports.protect = async (req, res, next) => {
   try {
     console.log('Protect middleware is called');
 
-    if(!req.headers.authorization && !req.headers.authorization.startsWith("Bearer")) throw new Error ("Please log in")
+    if (
+      !req.headers.authorization &&
+      !req.headers.authorization.startsWith('Bearer')
+    )
+      throw new Error('Please log in');
 
     const token = req.headers.authorization.split(' ')[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    if(!payload) throw new Error("Please Login again.");
-    
+    if (!payload) throw new Error('Please Login again.');
 
     console.log(payload);
     const user = await User.findById(payload._id);
@@ -80,7 +83,8 @@ exports.protect = async (req, res, next) => {
     if (!user) throw new Error('User Not found');
 
     const isPasswordChanged = user.passwordChanged(payload.iat);
-    if(isPasswordChanged) throw new Error ("Please log in again, your token has expired");
+    if (isPasswordChanged)
+      throw new Error('Please log in again, your token has expired');
 
     req.user = user;
     next();
@@ -92,8 +96,17 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-exports.restrictTo = (...roles)=>{
-    return (req,res,next)=>{
-        if(!roles.includes(req.user.role)) 
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    try {
+      if (!roles.includes(req.user.role))
+        throw new Error('You are not authenticated for this');
+      next();
+    } catch (err) {
+      res.status(403).json({
+        status: 'fail',
+        message: err.message,
+      });
     }
-}
+  };
+};
