@@ -110,3 +110,26 @@ exports.restrictTo = (...roles) => {
     }
   };
 };
+
+exports.forgetPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if(!user) throw new Error("Invalid Email address.")
+
+    const resetToken = user.createPasswordResetToken();
+
+    user.save({validateBeforeSave:false})
+
+
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: err.message,
+    });
+  }
+};
+
+exports.resetPassword = (req, res, next) => {};

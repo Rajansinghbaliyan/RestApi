@@ -36,6 +36,7 @@ const tourSchema = mongoose.Schema(
     startDates: [String],
     visible: Boolean,
   },
+  
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
