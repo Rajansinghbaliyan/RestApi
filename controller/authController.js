@@ -89,7 +89,7 @@ exports.protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    res.status(401).json({
+    res.status(401).json({ //401 is for not authorized 
       status: 'fail token is not correct',
       data: err.message,
     });
@@ -103,7 +103,7 @@ exports.restrictTo = (...roles) => {
         throw new Error('You are not authenticated for this');
       next();
     } catch (err) {
-      res.status(403).json({
+      res.status(403).json({  // 403 for forbidden request
         status: 'fail',
         message: err.message,
       });

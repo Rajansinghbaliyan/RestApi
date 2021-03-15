@@ -20,8 +20,8 @@ class APIFeatures {
         (match) => `$${match}`
       );
       queryObj = JSON.parse(queryStr);
-      console.log(this.queryString);
-      console.log(queryObj);
+      // console.log(this.queryString);
+      // console.log(queryObj);
       this.query = this.query.find(queryObj); //this is the one way to filter our data
       return this;
     }
@@ -41,13 +41,13 @@ class APIFeatures {
         console.log(field);
         this.query.select(field);
       } else {
-        this.query.select('-__v');
+        this.query.select('-__v'); //with - we could remove the certain fields from our query
       }
       return this;
     }
     limit() {
-      const page = this.queryString.page * 1 || 1;
-      const limit = this.queryString.limit * 1 || 5;
+      const page = this.queryString.page * 1 || 1;  //default pagination   this.queryString.page *1 to convert string to int
+      const limit = this.queryString.limit * 1 || 5; // default limit
       let itemToSkip = 0;
       if (page === 1 || page === 0) {
         itemToSkip = 0;

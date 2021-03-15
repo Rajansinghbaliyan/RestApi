@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 
 
-console.log(process.env.PORT);
+//console.log(process.env.PORT);
 
 const port = process.env.PORT || 5000
 
