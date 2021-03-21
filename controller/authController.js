@@ -4,6 +4,16 @@ const respond = require('../services/respond');
 const sendMail = require('../util/email');
 const crypto = require('crypto');
 
+const createSendToken = (user, res, status, message) => {
+  const token = signToken(user.id);
+  respond(res, status, message, token);
+};
+
+const signToken = (id) => {
+  return jwt.sign({ _id: id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+};
 exports.signup = async (req, res, next) => {
   try {
     const data = req.body;
@@ -16,15 +26,17 @@ exports.signup = async (req, res, next) => {
       passwordUpdatedAt: Date.now(),
     });
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
+    createSendToken(user, res, 201, 'User is created');
 
-    // res.status(201).json({
-    //   status: 'success',
-    //   token,
+    // const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    //   expiresIn: process.env.JWT_EXPIRES_IN,
     // });
-    respond(res, 201, 'success', token);
+
+    // // res.status(201).json({
+    // //   status: 'success',
+    // //   token,
+    // // });
+    // respond(res, 201, 'success', token);
   } catch (err) {
     // res.status(400).json({
     //   status: 'fail',
@@ -52,15 +64,16 @@ exports.login = async (req, res, next) => {
 
     if (!isPasswordCorrect) throw new Error('Password or Email is incorrect');
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
-
-    // res.status(200).json({
-    //   status: 'success',
-    //   token,
+    createSendToken(user, res, 200, 'User is logged in successfully');
+    // const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    //   expiresIn: process.env.JWT_EXPIRES_IN,
     // });
-    respond(res, 201, 'success', token);
+
+    // // res.status(200).json({
+    // //   status: 'success',
+    // //   token,
+    // // });
+    // respond(res, 201, 'success', token);
   } catch (err) {
     // res.status(401).json({
     //   status: 'fail',
@@ -154,25 +167,30 @@ exports.resetPassword = async (req, res, next) => {
     const resetToken = req.params.resetToken;
     const { password, confirmPassword } = req.body;
 
-    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
 
     if (!password || !confirmPassword)
       throw new Error('Please provide the password and confirm Password');
 
     const user = await User.findOne({ passwordResetToken: resetTokenHash });
-    if (!user) throw new Error("Your token is not correct");
+    if (!user) throw new Error('Your token is not correct');
 
     const isTokenValid = user.checkResetToken(resetToken);
     if (!isTokenValid) throw new Error('Your token expired');
 
-    user.updatePassword(password,confirmPassword);
+    user.updatePassword(password, confirmPassword);
     const query = await user.save();
 
-    const token = jwt.sign({ _id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
+    createSendToken(user, res, 201, 'User password is created successfully');
 
-    respond(res, 201, 'Password Updated', {query,token});
+    // const token = jwt.sign({ _id: user.id }, process.env.JWT_SECRET, {
+    //   expiresIn: process.env.JWT_EXPIRES_IN,
+    // });
+
+    // respond(res, 201, 'Password Updated', { query, token });
   } catch (err) {
     err.status = 400;
     return next(err);
