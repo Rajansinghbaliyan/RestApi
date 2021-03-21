@@ -1,5 +1,6 @@
 const Tours = require('../model/tour');
 const APIFeatures = require('../util/apiFeatures');
+const respond = require('../services/respond');
 
 exports.checkParamId = (req, res, next, val) => {
   console.log('The param method is called');
@@ -14,11 +15,12 @@ exports.getAllTours = async (req, res, next) => {
     features.filter().sort().fields().limit();
     const tour = await features.query;
 
-    res.status(200).json({
-      status: 'success',
-      requestedAt: req.requestTime,
-      data: { tour },
-    });
+    // res.status(200).json({
+    //   status: 'success',
+    //   requestedAt: req.requestTime,
+    //   data: { tour },
+    // });
+    respond(res,201,'success',tour);
   } catch (err) {
     console.log(err);
     //const errMessage = err.message;
@@ -51,11 +53,12 @@ exports.createTour = async (req, res, next) => {
   try {
     const tour = await Tours.create(req.body);
 
-    res.status(201).json({
-      status: 'success',
-      message: 'Request is successful',
-      data: { tour },
-    });
+    // res.status(201).json({
+    //   status: 'success',
+    //   message: 'Request is successful',
+    //   data: { tour },
+    // });
+    respond(res,201,'success',tour);
   } catch (err) {
     res.status(400).json({
       status: 'fail',
@@ -69,10 +72,11 @@ exports.getTour = (req, res, next) => {
   const id = parseInt(req.params.id);
   Tours.findOne({ id: id })
     .then((tour) => {
-      return res.status(200).json({
-        status: 'success',
-        data: { tour },
-      });
+      // return res.status(200).json({
+      //   status: 'success',
+      //   data: { tour },
+      // });
+      respond(res,200,'success',tour);
     })
     .catch((err) => {
       return res.status(400).json({
@@ -89,11 +93,12 @@ exports.updateTour = async (req, res, next) => {
     const tour = await Tours.findOneAndUpdate({ id: id }, req.body, {
       new: true,
     });
-    res.status(200).json({
-      status: 'success',
-      message: 'updated successfully',
-      data: { tour },
-    });
+    // res.status(200).json({
+    //   status: 'success',
+    //   message: 'updated successfully',
+    //   data: { tour },
+    // });
+    respond(res,200,'success',tour);
   } catch (err) {
     return res.status(400).json({
       status: 'fail',
@@ -111,10 +116,11 @@ exports.deleteTour = async (req, res, next) => {
       new: true,
     });
     //console.log(tour);
-    return res.status(200).json({
-      status: 'success',
-      data: { tour },
-    });
+    // return res.status(200).json({
+    //   status: 'success',
+    //   data: { tour },
+    // });
+    respond(res,200,'success',tour);
   } catch (err) {
     return res.status(400).json({
       status: 'fail',
@@ -149,10 +155,11 @@ exports.getToursStats = async (req, res, next) => {
     ]);
 
     console.log(stats);
-    return res.status(200).json({
-      status: 'success',
-      data: { stats },
-    });
+    // return res.status(200).json({
+    //   status: 'success',
+    //   data: { stats },
+    // });
+    return respond(res,200,'success',stats);
   } catch (err) {
     return res.status(400).json({
       status: 'fail',

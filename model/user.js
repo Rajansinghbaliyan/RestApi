@@ -18,10 +18,10 @@ const userSchema = new mongoose.Schema({
   photo: {
     type: String,
   },
-  role:{
+  role: {
     type: String,
-    enum:['user','guide','lead-guide','admin'],
-    default:'user'
+    enum: ['user', 'guide', 'lead-guide', 'admin'],
+    default: 'user',
   },
   password: {
     type: String,
@@ -45,12 +45,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     Default: Date.now(),
   },
-  passwordResetToken:{
-    type: String
+  passwordResetToken: {
+    type: String,
   },
-  passwordResetTokenExpire:{
-    type: Date
-  }
+  passwordResetTokenExpire: {
+    type: Date,
+  },
 });
 
 //it will run on save or create
@@ -62,31 +62,50 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+userSchema.pre('save',function(next){
+  if(!this.isModified('password') || this.isNew) return next();
+
+  this.passwordUpdatedAt = Date.now() - 1000;
+  next();
+})
+
 userSchema.methods.confirmPassword = async (password, passwordHash) => {
   return await bcrypt.compare(password, passwordHash);
 };
 
-userSchema.methods.passwordChanged = function(JWTCreated){
+userSchema.methods.passwordChanged = function (JWTCreated) {
   //to change the time stamp of the passwordUpdatedAt
 
   const changedTimeStamp = parseInt(this.passwordUpdatedAt.getTime() / 1000);
-  console.log(changedTimeStamp,JWTCreated);
-  if(JWTCreated < changedTimeStamp) return true;
+  console.log(changedTimeStamp, JWTCreated);
+  if (JWTCreated < changedTimeStamp) return true;
   return false;
-}
+};
 
-userSchema.methods.createPasswordResetToken = function(){
+userSchema.methods.generateResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
 
-  const resetTokenHash = crypto.createHash('sha256').digest(resetToken).toString('hex');
-
-  console.log({resetToken},{resetTokenHash});
-
+  const resetTokenHash = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
   this.passwordResetToken = resetTokenHash;
+  this.passwordResetTokenExpire = Date.now() + 10 * 60 * 1000;
+  // 10 min + current time
 
-  this.passwordResetTokenExpire = Date.now() + 10 *60 *1000;
+  return resetToken;
+};
 
-  return (resetToken);
+userSchema.methods.checkResetToken = function (token) {
+  return (Date.now() < this.passwordResetTokenExpire) ;
+};
+
+userSchema.methods.updatePassword = function(password,confirmPassword){
+  this.password = password;
+  this.passwordConfirm = confirmPassword;
+  
+  this.passwordResetToken = undefined;
+  this.passwordResetTokenExpire = undefined;
 }
 
 const User = mongoose.model('User', userSchema);

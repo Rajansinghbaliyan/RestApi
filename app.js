@@ -19,4 +19,14 @@ app.use((req, res, next) => {
 app.use('/api/v1/tours', tourRoutes);
 app.use('/api/v1/users', userRoutes);
 
+app.use((error,req,res,next)=>{
+  const stack = error.stack.split("\n")[0] + error.stack.split("\n")[1] ;
+  console.log(stack);
+  res.status(error.status).json({
+    status:'fail',
+    message: error.message,
+    stack
+  })
+})
+
 module.exports = app;

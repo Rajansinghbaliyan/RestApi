@@ -1,7 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config({path:'./config.env'}) //save all the setting to process env
 const app = require('./app');
-const mongoose = require('mongoose');
+//const mongoose = require('mongoose');
 
 
 

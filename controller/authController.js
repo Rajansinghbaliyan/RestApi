@@ -1,5 +1,8 @@
 const User = require('../model/user');
 const jwt = require('jsonwebtoken');
+const respond = require('../services/respond');
+const sendMail = require('../util/email');
+const crypto = require('crypto');
 
 exports.signup = async (req, res, next) => {
   try {
@@ -17,15 +20,18 @@ exports.signup = async (req, res, next) => {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    res.status(201).json({
-      status: 'success',
-      token,
-    });
+    // res.status(201).json({
+    //   status: 'success',
+    //   token,
+    // });
+    respond(res, 201, 'success', token);
   } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      data: err.message,
-    });
+    // res.status(400).json({
+    //   status: 'fail',
+    //   data: err.message,
+    // });
+    err.status = 400;
+    return next(err);
   }
 };
 
@@ -50,15 +56,18 @@ exports.login = async (req, res, next) => {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    res.status(200).json({
-      status: 'success',
-      token,
-    });
+    // res.status(200).json({
+    //   status: 'success',
+    //   token,
+    // });
+    respond(res, 201, 'success', token);
   } catch (err) {
-    res.status(401).json({
-      status: 'fail',
-      data: err.message,
-    });
+    // res.status(401).json({
+    //   status: 'fail',
+    //   data: err.message,
+    // });
+    err.status = 401;
+    return next(err);
   }
 };
 
@@ -89,10 +98,12 @@ exports.protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    res.status(401).json({ //401 is for not authorized 
-      status: 'fail token is not correct',
-      data: err.message,
-    });
+    // res.status(401).json({ //401 is for not authorized
+    //   status: 'fail token is not correct',
+    //   data: err.message,
+    // });
+    err.status = 401;
+    return next(err);
   }
 };
 
@@ -103,10 +114,12 @@ exports.restrictTo = (...roles) => {
         throw new Error('You are not authenticated for this');
       next();
     } catch (err) {
-      res.status(403).json({  // 403 for forbidden request
-        status: 'fail',
-        message: err.message,
-      });
+      // res.status(403).json({  // 403 for forbidden request
+      //   status: 'fail',
+      //   message: err.message,
+      // });
+      err.status = 403;
+      return next(err);
     }
   };
 };
@@ -114,22 +127,54 @@ exports.restrictTo = (...roles) => {
 exports.forgetPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
+    if (!user) throw new Error('Please enter the correct email');
 
-    if(!user) throw new Error("Invalid Email address.")
+    const resetToken = user.generateResetToken();
+    await user.save({ validateBeforeSave: false }); //to save the changes in the current user
 
-    const resetToken = user.createPasswordResetToken();
-
-    user.save({validateBeforeSave:false})
-
-
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: err.message,
+    const resetUrl = `${req.protocol}://${req.get(
+      'host'
+    )}/api/v1/users/resetPassword/${resetToken}`;
+    await sendMail({
+      email: user.email,
+      subject: 'The reset password',
+      //text: `Please click the url to change your pass word: /api/v1/users/resetPassword?resetToken=${resetToken}?email=${user.email}`
+      text: resetUrl,
     });
+    respond(res, 200, 'Reset Token is generated', resetToken);
+  } catch (err) {
+    err.status = 404; //not found
+    return next(err);
   }
 };
 
-exports.resetPassword = (req, res, next) => {};
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const resetToken = req.params.resetToken;
+    const { password, confirmPassword } = req.body;
+
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    if (!password || !confirmPassword)
+      throw new Error('Please provide the password and confirm Password');
+
+    const user = await User.findOne({ passwordResetToken: resetTokenHash });
+    if (!user) throw new Error("Your token is not correct");
+
+    const isTokenValid = user.checkResetToken(resetToken);
+    if (!isTokenValid) throw new Error('Your token expired');
+
+    user.updatePassword(password,confirmPassword);
+    const query = await user.save();
+
+    const token = jwt.sign({ _id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+
+    respond(res, 201, 'Password Updated', {query,token});
+  } catch (err) {
+    err.status = 400;
+    return next(err);
+  }
+};
